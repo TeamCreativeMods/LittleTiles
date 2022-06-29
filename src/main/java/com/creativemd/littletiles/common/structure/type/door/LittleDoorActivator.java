@@ -78,10 +78,9 @@ public class LittleDoorActivator extends LittleDoor {
             LittleDoor child = getChildrenDoor(i);
             if (child == null)
                 continue;
-            EntityAnimation childAnimation = child.openDoor(player, uuid, tickOnce);
-            if (childAnimation != null)
-                childAnimation.controller.onServerApproves();
+            child.openDoor(player, uuid, tickOnce);
         }
+        updateStructure();
         return null;
     }
     
@@ -138,6 +137,7 @@ public class LittleDoorActivator extends LittleDoor {
         inMotion = checkChildrenInMotion();
         if (!inMotion)
             completeAnimation();
+        updateStructure();
     }
     
     public static class LittleDoorActivatorParser extends LittleStructureGuiParser {

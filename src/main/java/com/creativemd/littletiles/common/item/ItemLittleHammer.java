@@ -109,8 +109,17 @@ public class ItemLittleHammer extends Item implements ILittleEditor, IItemToolti
                 else
                     new LittleActionDestroyBoxes(selection.getBoxes(false)).execute();
                 selection = null;
+                PreviewRenderer.marked = null;
             }
         return false;
+    }
+    
+    @Override
+    @SideOnly(Side.CLIENT)
+    public boolean onRightClick(World world, EntityPlayer player, ItemStack stack, PlacementPosition position, RayTraceResult result) {
+        if (selection != null)
+            selection.click(player);
+        return true;
     }
     
     @Override
@@ -125,8 +134,7 @@ public class ItemLittleHammer extends Item implements ILittleEditor, IItemToolti
     
     @Override
     public void onDeselect(World world, ItemStack stack, EntityPlayer player) {
-        if (selection != null)
-            selection = null;
+        selection = null;
     }
     
     @Override

@@ -12,9 +12,11 @@ import com.creativemd.creativecore.client.rendering.RenderBox;
 import com.creativemd.creativecore.client.rendering.face.CachedFaceRenderType;
 import com.creativemd.creativecore.client.rendering.face.FaceRenderType;
 import com.creativemd.creativecore.client.rendering.model.ICreativeRendered;
+import com.creativemd.creativecore.common.utils.mc.ColorUtils;
 import com.creativemd.creativecore.common.utils.mc.TickUtils;
 import com.creativemd.creativecore.common.utils.type.Pair;
 import com.creativemd.littletiles.LittleTiles;
+import com.creativemd.littletiles.client.LittleTilesClient;
 import com.creativemd.littletiles.client.render.cache.LayeredRenderBoxCache;
 import com.creativemd.littletiles.client.render.tile.LittleRenderBox;
 import com.creativemd.littletiles.common.action.LittleAction;
@@ -340,7 +342,7 @@ public class BlockTile extends BlockContainer implements ICreativeRendered, IFac
     
     @Override
     public float getBlockHardness(IBlockState blockState, World worldIn, BlockPos pos) {
-        return 0.1F;
+        return 1F;
     }
     
     public static boolean canHarvestBlock(EntityPlayer player, IBlockState state) {
@@ -454,7 +456,7 @@ public class BlockTile extends BlockContainer implements ICreativeRendered, IFac
     @SideOnly(Side.CLIENT)
     public boolean onBlockActivatedClient(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand hand, @Nullable ItemStack heldItem, EnumFacing side, float hitX, float hitY, float hitZ) {
         TEResult result = loadTeAndTile(worldIn, pos, playerIn);
-        if (result.isComplete() && !(playerIn.getHeldItemMainhand().getItem() instanceof ItemLittleWrench))
+        if (result.isComplete() && !(playerIn.getHeldItemMainhand().getItem() instanceof ItemLittleWrench) && LittleTilesClient.INTERACTION.start(true))
             return new LittleActionActivated(worldIn, pos, playerIn).execute();
         return false;
     }
@@ -850,10 +852,11 @@ public class BlockTile extends BlockContainer implements ICreativeRendered, IFac
     }
     
     @SideOnly(Side.CLIENT)
-    private static boolean checkforNeighbor(World world, EnumFacing facing, BlockPos pos) {
+    private static boolean checkforNeighbor(World world, EnumFacing facing, BlockPos pos, Block block, int meta, int color) {
         BlockPos newPos = pos.offset(facing);
         IBlockState state = world.getBlockState(newPos);
-        return !state.doesSideBlockRendering(world, newPos, facing.getOpposite());
+        return !(state
+            .doesSideBlockRendering(world, newPos, facing.getOpposite()) || (ColorUtils.WHITE == color && block == state.getBlock() && state.getBlock().getMetaFromState(state) == meta));
     }
     
     @SideOnly(Side.CLIENT)
@@ -864,7 +867,7 @@ public class BlockTile extends BlockContainer implements ICreativeRendered, IFac
         }
         Boolean shouldRender = neighbors.get(facing);
         if (shouldRender == null) {
-            shouldRender = checkforNeighbor(tileEntity.getWorld(), facing, tileEntity.getPos());
+            shouldRender = checkforNeighbor(tileEntity.getWorld(), facing, tileEntity.getPos(), cube.block, cube.meta, cube.color);
             neighbors.put(facing, shouldRender);
         }
         

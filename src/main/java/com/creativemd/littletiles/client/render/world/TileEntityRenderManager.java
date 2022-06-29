@@ -16,11 +16,11 @@ public class TileEntityRenderManager {
     private TileEntityLittleTiles te;
     
     private int requestedIndex = -1;
-    private int finishedIndex = -1;
     private int renderState = -1;
     
     private boolean queued = false;
     private boolean building = false;
+    private boolean eraseBoxCache = false;
     
     public boolean hasLightChanged = false;
     public boolean hasNeighbourChanged = false;
@@ -47,9 +47,9 @@ public class TileEntityRenderManager {
     public void chunkUpdate(Object chunk) {
         synchronized (this) {
             boolean doesNeedUpdate = hasNeighbourChanged || hasLightChanged || requestedIndex == -1;
+            boolean eraseBoxCache = false;
             if (renderState != LittleChunkDispatcher.currentRenderState) {
-                if (!building)
-                    boxCache.clear();
+                eraseBoxCache = true;
                 doesNeedUpdate = true;
             }
             
@@ -57,19 +57,26 @@ public class TileEntityRenderManager {
             hasNeighbourChanged = false;
             
             if (doesNeedUpdate)
-                queue();
+                queue(eraseBoxCache);
         }
+    }
+    
+    public boolean hasAdditional() {
+        return bufferCache.hasAdditional();
+    }
+    
+    public void beforeClientReceivesUpdate() {
+        bufferCache.beforeUpdate();
+    }
+    
+    public void afterClientReceivesUpdate() {
+        bufferCache.afterUpdate();
     }
     
     public void tilesChanged() {
         requireRenderingBoundingBoxUpdate = true;
         cachedRenderDistance = 0;
-        
-        synchronized (this) {
-            if (!building)
-                boxCache.clear();
-            queue();
-        }
+        queue(true);
     }
     
     public double getMaxRenderDistanceSquared() {
@@ -116,12 +123,15 @@ public class TileEntityRenderManager {
     
     public void neighborChanged() {
         hasNeighbourChanged = true;
-        queue();
+        queue(false);
     }
     
-    public void queue() {
+    public void queue(boolean eraseBoxCache) {
         synchronized (this) {
             requestedIndex++;
+            
+            this.eraseBoxCache |= eraseBoxCache;
+            
             if (!queued) {
                 if (RenderingThread.addCoordToUpdate(te))
                     queued = true;
@@ -131,6 +141,10 @@ public class TileEntityRenderManager {
     
     public int startBuildingCache() {
         synchronized (this) {
+            if (eraseBoxCache) {
+                boxCache.clear();
+                eraseBoxCache = false;
+            }
             building = true;
             return requestedIndex;
         }
@@ -139,9 +153,8 @@ public class TileEntityRenderManager {
     public boolean finishBuildingCache(int index, int renderState, boolean force) {
         synchronized (this) {
             this.building = false;
-            this.finishedIndex = index;
             this.renderState = renderState;
-            boolean done = force || (index == requestedIndex && this.renderState == renderState);
+            boolean done = force || (index >= requestedIndex && this.renderState == renderState);
             if (done)
                 queued = false;
             this.hasLightChanged = false;
@@ -151,10 +164,11 @@ public class TileEntityRenderManager {
     }
     
     public void resetRenderingState() {
-        queued = false;
-        building = false;
-        requestedIndex = -1;
-        finishedIndex = -1;
+        synchronized (this) {
+            queued = false;
+            building = false;
+            requestedIndex = -1;
+        }
     }
     
     public void chunkUnload() {

@@ -45,9 +45,8 @@ public abstract class LittleActionBoxes extends LittleAction {
     @Override
     protected boolean action(EntityPlayer player) throws LittleActionException {
         if (boxes.isEmpty())
-            return false;
+            return true;
         
-        boolean placed = false;
         World world = player.world;
         
         if (LittleTiles.CONFIG.isEditLimited(player)) {
@@ -85,14 +84,16 @@ public abstract class LittleActionBoxes extends LittleAction {
                 continue;
             }
             
-            placed = true;
-            
             action(world, player, pos, state, entry.getValue(), boxes.context);
         }
         
+        actionDone(player, world);
+        
         world.playSound(null, player.getPosition(), SoundEvents.ENTITY_ITEMFRAME_ADD_ITEM, SoundCategory.BLOCKS, 1, 1);
-        return placed;
+        return true;
     }
+    
+    public void actionDone(EntityPlayer player, World world) {}
     
     @Override
     public void writeBytes(ByteBuf buf) {

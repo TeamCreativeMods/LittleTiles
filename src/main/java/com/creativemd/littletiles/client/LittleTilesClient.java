@@ -11,6 +11,7 @@ import com.creativemd.creativecore.client.rendering.model.CreativeBlockRenderHel
 import com.creativemd.creativecore.common.utils.mc.ColorUtils;
 import com.creativemd.littletiles.LittleTiles;
 import com.creativemd.littletiles.client.gui.controls.GuiAxisIndicatorControl;
+import com.creativemd.littletiles.client.interact.LittleInteractionHandlerClient;
 import com.creativemd.littletiles.client.render.entity.RenderSizedTNTPrimed;
 import com.creativemd.littletiles.client.render.overlay.LittleTilesProfilerOverlay;
 import com.creativemd.littletiles.client.render.overlay.OverlayControl;
@@ -87,6 +88,7 @@ public class LittleTilesClient extends LittleTilesServer {
     public static TileEntityTilesRenderer tileEntityRenderer;
     
     public static OverlayRenderer overlay;
+    public static LittleInteractionHandlerClient INTERACTION;
     
     private static Field entityUUIDField = ReflectionHelper.findField(EntitySpawnMessage.class, "entityUUID");
     private static Field entityIdField = ReflectionHelper.findField(EntityMessage.class, "entityId");
@@ -180,10 +182,8 @@ public class LittleTilesClient extends LittleTilesServer {
                     if (animation == null) {
                         animation = new EntityAnimation(mc.world);
                         animation.setUniqueId(uuid);
-                    } else {
+                    } else
                         animation.spawnedInWorld = true;
-                        animation.controller.onServerApproves();
-                    }
                     
                     if (animation != null) {
                         animation.setEntityId(entityIdField.getInt(input));
@@ -236,6 +236,8 @@ public class LittleTilesClient extends LittleTilesServer {
                 ItemLittleRecipeAdvanced.model = null;
             }
         });
+        
+        INTERACTION = new LittleInteractionHandlerClient();
     }
     
     @Override

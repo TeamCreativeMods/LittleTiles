@@ -107,7 +107,7 @@ public class RenderingThread extends Thread {
             return false;
         }
         
-        if (te.isEmpty()) {
+        if (te.isRenderingEmpty()) {
             int index = te.render.startBuildingCache();
             te.render.getBoxCache().clear();
             synchronized (te.render) {
@@ -328,16 +328,16 @@ public class RenderingThread extends Thread {
                             if (LittleTilesProfilerOverlay.isActive())
                                 LittleTilesProfilerOverlay.finishBuildingCache(System.nanoTime() - duration);
                         } catch (Exception e) {
-                            if (!(e instanceof RenderingException))
-                                e.printStackTrace();
+                            e.printStackTrace();
                             if (!finish(data, -1, false))
                                 updateCoords.add(data);
                         }
                     } catch (InvalidTileEntityException e) {
                         finish(data, -1, true);
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        updateCoords.add(data);
+                        if (!(e instanceof RenderingException))
+                            e.printStackTrace();
+                        //updateCoords.add(data);
                     } catch (OutOfMemoryError error) {
                         updateCoords.add(data);
                         error.printStackTrace();

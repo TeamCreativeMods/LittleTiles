@@ -52,6 +52,11 @@ public class TESignalConverter extends TileEntityCreative implements ISignalStru
     }
     
     @Override
+    public void handleUpdate(NBTTagCompound nbt, boolean chunkUpdate) {
+        readFromNBT(nbt);
+    }
+    
+    @Override
     public int getBandwidth() {
         return 4;
     }
@@ -165,6 +170,13 @@ public class TESignalConverter extends TileEntityCreative implements ISignalStru
             changed();
             findNetwork().update();
         }
+    }
+    
+    @Override
+    public void unload(EnumFacing facing, ISignalStructureBase base) {
+        int index = indexOf(base);
+        if (index != -1)
+            connections.remove(index);
     }
     
     public class SignalConnection {

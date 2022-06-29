@@ -6,9 +6,9 @@ import java.lang.reflect.Method;
 
 import javax.annotation.Nullable;
 
-import com.creativemd.creativecore.common.packet.PacketHandler;
 import com.creativemd.creativecore.common.utils.mc.TickUtils;
 import com.creativemd.creativecore.common.world.CreativeWorld;
+import com.creativemd.littletiles.client.LittleTilesClient;
 import com.creativemd.littletiles.client.event.HoldLeftClick;
 import com.creativemd.littletiles.client.event.InputEventHandler;
 import com.creativemd.littletiles.client.event.LeftClick;
@@ -16,7 +16,6 @@ import com.creativemd.littletiles.client.event.WheelClick;
 import com.creativemd.littletiles.client.render.entity.RenderAnimation;
 import com.creativemd.littletiles.client.render.overlay.PreviewRenderer;
 import com.creativemd.littletiles.common.entity.EntityAnimation;
-import com.creativemd.littletiles.common.packet.LittleConsumeRightClickEvent;
 import com.creativemd.littletiles.common.world.LittleAnimationHandler;
 import com.creativemd.littletiles.common.world.WorldAnimationHandler;
 
@@ -172,12 +171,12 @@ public class LittleAnimationHandlerClient extends LittleAnimationHandler {
                 pointedEntity = (EntityAnimation) selectedEntity;
             
             if (pointedEntity != null) {
-                if (pointedEntity.onRightClick(player, pos, look))
-                    if (event instanceof RightClickBlock) {
-                        event.setCanceled(true);
-                        event.setCancellationResult(EnumActionResult.SUCCESS);
-                    } else
-                        PacketHandler.sendPacketToServer(new LittleConsumeRightClickEvent());
+                if (!pointedEntity.onRightClick(player, pos, look))
+                    LittleTilesClient.INTERACTION.start(true);
+                if (event instanceof RightClickBlock) {
+                    event.setCanceled(true);
+                    event.setCancellationResult(EnumActionResult.SUCCESS);
+                }
             }
         }
     }
@@ -190,8 +189,10 @@ public class LittleAnimationHandlerClient extends LittleAnimationHandler {
         World world = lastWorldRayTraceResult;
         EntityPlayer player = event.player;
         
-        if (InputEventHandler.onPickBlock(target, player, world))
+        if (InputEventHandler.onPickBlock(target, player, world)) {
+            event.setCanceled(true);
             return;
+        }
         
         IBlockState state = world.getBlockState(target.getBlockPos());
         

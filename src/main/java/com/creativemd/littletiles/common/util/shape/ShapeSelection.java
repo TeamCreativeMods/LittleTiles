@@ -132,7 +132,7 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
     }
     
     public LittleBoxes getBoxes(boolean allowLowResolution) {
-        if ((marked && this.allowLowResolution) || allowLowResolution)
+        if (this.allowLowResolution && allowLowResolution)
             return getCache().get(true);
         return getCache().get(false);
     }
@@ -159,6 +159,8 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
     @SideOnly(Side.CLIENT)
     public void setLast(EntityPlayer player, ItemStack stack, PlacementPosition position, RayTraceResult result) {
         this.stack = stack;
+        if (result == null)
+            return;
         if (positions.isEmpty())
             pos = position.getPos();
         last = new ShapeSelectPos(player, position, result);
@@ -176,6 +178,7 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
         if (marked) {
             while (shape.maxAllowed() != -1 && positions.size() >= shape.maxAllowed())
                 positions.remove(positions.size() - 1);
+            markedPosition = positions.size() - 1;
             marked = false;
         } else {
             markedPosition = positions.size();
@@ -213,10 +216,10 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
     
     @Override
     @SideOnly(Side.CLIENT)
-    public void render(double x, double y, double z) {
+    public void render(LittleGridContext context, double x, double y, double z) {
         if (marked) {
             for (int i = 0; i < positions.size(); i++)
-                positions.get(i).render(x, y, z, markedPosition == i);
+                positions.get(i).render(context, x, y, z, markedPosition == i);
             
         }
     }
@@ -243,7 +246,7 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
         Vec3d look = player.getLook(partialTickTime);
         Vec3d vec32 = pos.addVector(look.x * d0, look.y * d0, look.z * d0);
         for (int i = 0; i < positions.size(); i++) {
-            RayTraceResult result = positions.get(i).box.calculateIntercept(pos, vec32);
+            RayTraceResult result = positions.get(i).getBox().calculateIntercept(pos, vec32);
             if (result != null) {
                 double tempDistance = pos.squareDistanceTo(result.hitVec);
                 if (tempDistance < distance) {
@@ -290,6 +293,8 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
     }
     
     public ShapeSelectPos getLast() {
+        if (marked)
+            return positions.get(positions.size() - 1);
         return last;
     }
     
@@ -346,13 +351,11 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
         public final PlacementPosition pos;
         public final RayTraceResult ray;
         public final BlockTile.TEResult result;
-        public AxisAlignedBB box;
         
         public ShapeSelectPos(EntityPlayer player, PlacementPosition position, RayTraceResult result) {
             this.pos = position;
             this.ray = result;
             this.result = BlockTile.loadTeAndTile(player.world, result.getBlockPos(), player);
-            this.box = pos.getBox().grow(0.002);
             if (inside && result.sideHit.getAxisDirection() == AxisDirection.POSITIVE && context.isAtEdge(VectorUtils.get(result.sideHit.getAxis(), result.hitVec)))
                 pos.getVec().sub(result.sideHit);
         }
@@ -361,14 +364,12 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
             this.pos = position;
             this.ray = ray;
             this.result = result;
-            this.box = pos.getBox().grow(0.002);
         }
         
         public void move(LittleGridContext context, EnumFacing facing) {
             LittleVec vec = new LittleVec(facing);
             vec.scale(GuiScreen.isCtrlKeyDown() ? context.size : 1);
             pos.subVec(vec);
-            box = pos.getBox().grow(0.002);
         }
         
         @Override
@@ -385,15 +386,19 @@ public class ShapeSelection implements Iterable<ShapeSelectPos>, IGridBased, IMa
             return false;
         }
         
+        public AxisAlignedBB getBox() {
+            return pos.getBox(context);
+        }
+        
         @SideOnly(Side.CLIENT)
-        public void render(double x, double y, double z, boolean selected) {
+        public void render(LittleGridContext context, double x, double y, double z, boolean selected) {
             GlStateManager.enableBlend();
             GlStateManager
                 .tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             
             GlStateManager.disableTexture2D();
             GlStateManager.depthMask(false);
-            AxisAlignedBB box = this.box.offset(-x, -y, -z);
+            AxisAlignedBB box = getBox().grow(0.002).offset(-x, -y, -z);
             
             GlStateManager.glLineWidth(4.0F);
             RenderGlobal.drawSelectionBoundingBox(box, 0.0F, 0.0F, 0.0F, 1F);

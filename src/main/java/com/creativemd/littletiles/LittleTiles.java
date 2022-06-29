@@ -91,21 +91,21 @@ import com.creativemd.littletiles.common.item.ItemLittleWrench;
 import com.creativemd.littletiles.common.item.ItemMultiTiles;
 import com.creativemd.littletiles.common.item.ItemPremadeStructure;
 import com.creativemd.littletiles.common.mod.albedo.AlbedoExtension;
+import com.creativemd.littletiles.common.mod.lux.LuxExtension;
 import com.creativemd.littletiles.common.mod.theoneprobe.TheOneProbeManager;
 import com.creativemd.littletiles.common.mod.warpdrive.TileEntityLittleTilesTransformer;
 import com.creativemd.littletiles.common.packet.LittleActionMessagePacket;
 import com.creativemd.littletiles.common.packet.LittleActivateDoorPacket;
+import com.creativemd.littletiles.common.packet.LittleAnimationControllerPacket;
+import com.creativemd.littletiles.common.packet.LittleAnimationDataPacket;
+import com.creativemd.littletiles.common.packet.LittleAnimationDestroyPacket;
 import com.creativemd.littletiles.common.packet.LittleBedPacket;
 import com.creativemd.littletiles.common.packet.LittleBlockPacket;
 import com.creativemd.littletiles.common.packet.LittleBlockUpdatePacket;
 import com.creativemd.littletiles.common.packet.LittleBlocksUpdatePacket;
-import com.creativemd.littletiles.common.packet.LittleConsumeRightClickEvent;
-import com.creativemd.littletiles.common.packet.LittleEntityFixControllerPacket;
-import com.creativemd.littletiles.common.packet.LittleEntityRequestPacket;
 import com.creativemd.littletiles.common.packet.LittleFlipPacket;
+import com.creativemd.littletiles.common.packet.LittleInteractionPacket;
 import com.creativemd.littletiles.common.packet.LittleNeighborUpdatePacket;
-import com.creativemd.littletiles.common.packet.LittlePlacedAnimationPacket;
-import com.creativemd.littletiles.common.packet.LittleResetAnimationPacket;
 import com.creativemd.littletiles.common.packet.LittleRotatePacket;
 import com.creativemd.littletiles.common.packet.LittleScrewdriverSelectionPacket;
 import com.creativemd.littletiles.common.packet.LittleSelectionModePacket;
@@ -132,6 +132,7 @@ import com.creativemd.littletiles.common.util.ingredient.rules.IngredientRules;
 import com.creativemd.littletiles.common.world.WorldAnimationHandler;
 import com.creativemd.littletiles.server.LittleTilesServer;
 import com.creativemd.littletiles.server.NeighborUpdateOrganizer;
+import com.creativemd.littletiles.server.interact.LittleInteractionHandlerServer;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -563,19 +564,19 @@ public class LittleTiles {
         CreativeCorePacket.registerPacket(LittleFlipPacket.class);
         CreativeCorePacket.registerPacket(LittleNeighborUpdatePacket.class);
         CreativeCorePacket.registerPacket(LittleActivateDoorPacket.class);
-        CreativeCorePacket.registerPacket(LittleEntityRequestPacket.class);
         CreativeCorePacket.registerPacket(LittleBedPacket.class);
         CreativeCorePacket.registerPacket(LittleVanillaBlockPacket.class);
         CreativeCorePacket.registerPacket(LittleSelectionModePacket.class);
         CreativeCorePacket.registerPacket(LittleBlockUpdatePacket.class);
-        CreativeCorePacket.registerPacket(LittleResetAnimationPacket.class);
-        CreativeCorePacket.registerPacket(LittlePlacedAnimationPacket.class);
         CreativeCorePacket.registerPacket(LittleActionMessagePacket.class);
         CreativeCorePacket.registerPacket(LittleUpdateStructurePacket.class);
-        CreativeCorePacket.registerPacket(LittleEntityFixControllerPacket.class);
         CreativeCorePacket.registerPacket(LittleScrewdriverSelectionPacket.class);
         CreativeCorePacket.registerPacket(LittleUpdateOutputPacket.class);
-        CreativeCorePacket.registerPacket(LittleConsumeRightClickEvent.class);
+        CreativeCorePacket.registerPacket(LittleInteractionPacket.class);
+        
+        CreativeCorePacket.registerPacket(LittleAnimationControllerPacket.class);
+        CreativeCorePacket.registerPacket(LittleAnimationDestroyPacket.class);
+        CreativeCorePacket.registerPacket(LittleAnimationDataPacket.class);
         
         LittleAction.registerLittleAction("com", LittleActionCombined.class);
         
@@ -599,8 +600,6 @@ public class LittleTiles {
         EntityRegistry.registerModEntity(new ResourceLocation(modid, "sit"), EntitySit.class, "sit", 1, this, 250, 250, true);
         EntityRegistry.registerModEntity(new ResourceLocation(modid, "animation"), EntityAnimation.class, "animation", 2, this, 2000, 250, true);
         
-        LittleTilesServer.NEIGHBOR = new NeighborUpdateOrganizer();
-        
         proxy.loadSidePost();
         
         if (Loader.isModLoaded("warpdrive"))
@@ -611,7 +610,13 @@ public class LittleTiles {
         if (Loader.isModLoaded("albedo"))
             MinecraftForge.EVENT_BUS.register(AlbedoExtension.class);
         
+        if (Loader.isModLoaded("lux"))
+            MinecraftForge.EVENT_BUS.register(LuxExtension.class);
+        
         MinecraftForge.EVENT_BUS.register(ChiselAndBitsConveration.class);
+        
+        LittleTilesServer.NEIGHBOR = new NeighborUpdateOrganizer();
+        LittleTilesServer.INTERACTION = new LittleInteractionHandlerServer();
         
     }
     

@@ -30,7 +30,6 @@ import com.creativemd.littletiles.common.mod.chiselsandbits.ChiselsAndBitsManage
 import com.creativemd.littletiles.common.mod.coloredlights.ColoredLightsManager;
 import com.creativemd.littletiles.common.packet.LittleBlockUpdatePacket;
 import com.creativemd.littletiles.common.packet.LittleBlocksUpdatePacket;
-import com.creativemd.littletiles.common.packet.LittleEntityRequestPacket;
 import com.creativemd.littletiles.common.structure.LittleStructure;
 import com.creativemd.littletiles.common.structure.exception.CorruptedConnectionException;
 import com.creativemd.littletiles.common.structure.exception.NotYetConnectedException;
@@ -115,7 +114,7 @@ public abstract class LittleAction extends CreativeCorePacket {
         
         if (index > 0) {
             if (index < lastActions.size())
-                lastActions = lastActions.subList(index, lastActions.size() - 1);
+                lastActions = lastActions.subList(index, lastActions.size());
             else
                 lastActions = new ArrayList<>();
         }
@@ -335,8 +334,8 @@ public abstract class LittleAction extends CreativeCorePacket {
     public static boolean canConvertBlock(EntityPlayer player, World world, BlockPos pos, IBlockState state, int affected) throws LittleActionException {
         if (LittleTiles.CONFIG.build.get(player).limitAffectedBlocks && LittleTiles.CONFIG.build.get(player).maxAffectedBlocks < affected)
             throw new NotAllowedToConvertBlockException(player);
-        if (!LittleTiles.CONFIG.build.get(player).editUnbreakable)
-            return state.getBlock().getBlockHardness(state, world, pos) > 0;
+        if (!LittleTiles.CONFIG.build.get(player).editUnbreakable && state.getBlock().getBlockHardness(state, world, pos) < 0)
+            throw new NotAllowedToConvertBlockException(player);
         return LittleTiles.CONFIG.canEditBlock(player, state, pos);
     }
     
@@ -391,17 +390,17 @@ public abstract class LittleAction extends CreativeCorePacket {
                     tile.setBox(box);
                     tiles.add(tile);
                 } else if (state.getMaterial().isReplaceable()) {
-                    if (!world.setBlockState(pos, BlockTile.getState(attribute)))
+                    if (!world.setBlockState(pos, BlockTile.getStateByAttribute(attribute)))
                         return null;
                     tileEntity = world.getTileEntity(pos);
                 }
             }
             
             if (tiles != null && !tiles.isEmpty()) {
-                world.setBlockState(pos, BlockTile.getState(attribute));
+                world.setBlockState(pos, BlockTile.getStateByAttribute(attribute));
                 TileEntityLittleTiles te = (TileEntityLittleTiles) world.getTileEntity(pos);
                 te.convertTo(context);
-                te.updateTiles((x) -> x.noneStructureTiles().addAll(tiles));
+                te.updateTilesSecretly((x) -> x.noneStructureTiles().addAll(tiles));
                 te.convertToSmallest();
                 tileEntity = te;
             }
@@ -436,12 +435,6 @@ public abstract class LittleAction extends CreativeCorePacket {
     
     private static Method WorldEditEvent = loadWorldEditEvent();
     private static Object worldEditInstance = null;
-    
-    public static void sendEntityResetToClient(EntityPlayer player, EntityAnimation animation) {
-        if (!(player instanceof EntityPlayerMP))
-            return;
-        PacketHandler.sendPacketToPlayer(new LittleEntityRequestPacket(animation.getUniqueID(), animation.writeToNBT(new NBTTagCompound()), false), (EntityPlayerMP) player);
-    }
     
     public static void sendBlockResetToClient(World world, EntityPlayer player, BlockPos pos) {
         if (!(player instanceof EntityPlayerMP))
@@ -504,7 +497,14 @@ public abstract class LittleAction extends CreativeCorePacket {
         if (player == null || player.world.isRemote)
             return true;
         
-        if (player.isSpectator() || (!rightClick && (PlayerUtils.isAdventure(player) || !player.isAllowEdit())))
+        if (player.isSpectator())
+            return false;
+        
+        if (!rightClick && PlayerUtils.isAdventure(player)) {
+            ItemStack stack = player.getHeldItemMainhand();
+            if (!stack.canDestroy(world.getBlockState(pos).getBlock()))
+                return false;
+        } else if (!rightClick && !player.isAllowEdit())
             return false;
         
         if (WorldEditEvent != null) {

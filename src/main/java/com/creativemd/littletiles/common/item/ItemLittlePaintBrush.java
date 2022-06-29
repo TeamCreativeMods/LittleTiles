@@ -133,8 +133,7 @@ public class ItemLittlePaintBrush extends Item implements ILittleEditor, IItemTo
     
     @Override
     public void onDeselect(World world, ItemStack stack, EntityPlayer player) {
-        if (selection != null)
-            selection = null;
+        selection = null;
     }
     
     @Override
@@ -152,6 +151,14 @@ public class ItemLittlePaintBrush extends Item implements ILittleEditor, IItemTo
     
     @Override
     @SideOnly(Side.CLIENT)
+    public boolean onRightClick(World world, EntityPlayer player, ItemStack stack, PlacementPosition position, RayTraceResult result) {
+        if (selection != null)
+            selection.click(player);
+        return true;
+    }
+    
+    @Override
+    @SideOnly(Side.CLIENT)
     public boolean onClickBlock(World world, EntityPlayer player, ItemStack stack, PlacementPosition position, RayTraceResult result) {
         if (LittleAction.isUsingSecondMode(player)) {
             selection = null;
@@ -163,6 +170,7 @@ public class ItemLittlePaintBrush extends Item implements ILittleEditor, IItemTo
                 else
                     new LittleActionColorBoxes(selection.getBoxes(false), getColor(stack), false).execute();
                 selection = null;
+                PreviewRenderer.marked = null;
             }
         return false;
     }

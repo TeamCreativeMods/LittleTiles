@@ -16,6 +16,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.translation.I18n;
+import net.minecraftforge.fml.relauncher.Side;
 
 public class LittleTilesConfig {
     
@@ -85,6 +86,9 @@ public class LittleTilesConfig {
         
         @CreativeConfig
         public int maxDoorDistance = 512;
+        
+        @CreativeConfig
+        public boolean allowConverationToChiselsAndBits = true;
         
     }
     
@@ -172,6 +176,22 @@ public class LittleTilesConfig {
         
     }
     
+    public static class AreaTooLarge extends LittleActionException {
+        
+        public LittleBuildingConfig config;
+        
+        public AreaTooLarge(EntityPlayer player) {
+            super("exception.permission.recipe.size");
+            config = LittleTiles.CONFIG.build.get(player);
+        }
+        
+        @Override
+        public String getLocalizedMessage() {
+            return I18n.translateToLocalFormatted(getMessage(), config.recipeBlocksLimit);
+        }
+        
+    }
+    
     public static class Core implements ICreativeConfig {
         
         @CreativeConfig
@@ -193,7 +213,7 @@ public class LittleTilesConfig {
         public void configured() {
             LittleGridContext.loadGrid(minSize, defaultSize, scale, exponent);
             ItemMultiTiles.currentContext = LittleGridContext.get();
-            ItemLittleBag.maxStackSizeOfTiles = ItemLittleBag.maxStackSize * LittleGridContext.get().maxTilesPerBlock;
+            ItemLittleBag.maxStackSizeOfTiles = (int) (ItemLittleBag.maxStackSize * LittleGridContext.get().maxTilesPerBlock);
             LittleStructurePremade.reloadPremadeStructures();
             ItemMultiTiles.reloadExampleStructures();
         }
@@ -212,6 +232,7 @@ public class LittleTilesConfig {
         
         @CreativeConfig
         public boolean useAltWhenFlying = true;
+        
     }
     
     public static class Rendering implements ICreativeConfig {
@@ -249,9 +270,16 @@ public class LittleTilesConfig {
         @CreativeConfig
         public boolean showTooltip = true;
         
+        @CreativeConfig
+        public boolean enhancedResorting = true;
+        
         @Override
-        public void configured() {
-            RenderingThread.initThreads(renderingThreadCount);
+        public void configured() {}
+        
+        @Override
+        public void configured(Side side) {
+            if (side.isClient())
+                RenderingThread.initThreads(renderingThreadCount);
         }
     }
 }

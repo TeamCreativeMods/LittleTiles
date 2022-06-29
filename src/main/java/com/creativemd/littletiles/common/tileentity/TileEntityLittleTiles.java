@@ -49,8 +49,6 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.Mirror;
 import net.minecraft.util.Rotation;
@@ -66,6 +64,7 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
     
     protected final TileEntityInteractor interactor = new TileEntityInteractor();
     protected TileList tiles;
+    private boolean unloaded = false;
     private boolean preventUnload = true;
     protected LittleGridContext context = LittleGridContext.getMin();
     
@@ -199,6 +198,7 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
             preventUnload = true;
             world.setBlockState(pos, BlockTile.getState(ticking, rendered), 20);
             world.setTileEntity(pos, newTe);
+            invalidate();
             preventUnload = true;
             return newTe;
         }
@@ -228,6 +228,7 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
             preventUnload = true;
             world.setBlockState(pos, BlockTile.getState(ticking, rendered), 2);
             world.setTileEntity(pos, newTe);
+            invalidate();
             preventUnload = true;
         }
     }
@@ -568,19 +569,16 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
     }
     
     @Override
-    public void getDescriptionNBT(NBTTagCompound nbt) {
-        writeToNBT(nbt);
-    }
-    
-    @Override
-    public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
-        handleUpdatePacket(net, pkt.getNbtCompound());
-        super.onDataPacket(net, pkt);
-    }
-    
-    public void handleUpdatePacket(NetworkManager net, NBTTagCompound nbt) {
+    public void handleUpdate(NBTTagCompound nbt, boolean chunkUpdate) {
+        if (isClientSide())
+            render.beforeClientReceivesUpdate();
+        
         readFromNBT(nbt);
-        updateTiles(false);
+        if (!chunkUpdate)
+            updateTiles(false);
+        
+        if (isClientSide())
+            render.afterClientReceivesUpdate();
     }
     
     public RayTraceResult rayTrace(EntityPlayer player) {
@@ -724,6 +722,11 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
         return highest != null ? highest.getBlockState() : null;
     }
     
+    @SideOnly(Side.CLIENT)
+    public boolean isRenderingEmpty() {
+        return tiles.isCompletelyEmpty() && !render.hasAdditional();
+    }
+    
     public boolean isEmpty() {
         return tiles.isCompletelyEmpty();
     }
@@ -735,8 +738,13 @@ public class TileEntityLittleTiles extends TileEntityCreative implements ILittle
             tiles.unload();
     }
     
+    public boolean unloaded() {
+        return unloaded;
+    }
+    
     @Override
     public void onChunkUnload() {
+        unloaded = true;
         super.onChunkUnload();
         tiles.unload();
         if (world.isRemote) {
